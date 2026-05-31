@@ -15,18 +15,18 @@ bw-inst.md
 docker-compose.override.yml
 docker-compose.*.override.yml
 
-# Persistent DB and app data
-workspace/mssql/
-workspace/bwdata/
-workspace/*/data/
-workspace/*/db/
-workspace/*/backups/
-workspace/logs/
-workspace/*/logs/
+# Persistent DB and app data (ignore contents, allow tracking of placeholder files)
+workspace/mssql/*
+workspace/bwdata/*
+workspace/*/data/*
+workspace/*/db/*
+workspace/*/backups/*
+workspace/logs/*
+workspace/*/logs/*
 *.log
 
-# Nginx certs and keys
-workspace/nginx/certs/
+# Nginx certs and keys (ignore cert files, keep certs folder tracked)
+workspace/nginx/certs/*
 *.pem
 *.key
 *.crt
