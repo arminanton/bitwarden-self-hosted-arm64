@@ -1,0 +1,111 @@
+version: '3.8'
+
+x-defaults: &defaults
+  build:
+    context: ..
+    dockerfile: setup/Dockerfile.dotnet-service
+  args:
+    BITWARDEN_REPO: "${BITWARDEN_REPO:-https://github.com/bitwarden/server.git}"
+    BITWARDEN_REF: "${BITWARDEN_REF:-main}"
+    HOST_UID: "${HOST_UID}"
+    HOST_GID: "${HOST_GID}"
+  environment:
+    - HOST_UID=${HOST_UID}
+    - HOST_GID=${HOST_GID}
+  networks:
+    - bwhost_net
+
+services:
+  mssql:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: bwhost_mssql
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    volumes:
+      - ../workspace/mssql:/var/opt/mssql
+    ports:
+      - "1433:1433"
+
+  api:
+    <<: *defaults
+    build:
+      <<: *defaults
+      args:
+        SERVICE_PROJECT_PATH: src/Api
+        SERVICE_PROJECT_FILE: Api.csproj
+    image: localhost/bitwarden/api:${TAG:-2026.5.0-arm64}
+    volumes:
+      - ../workspace/api:/workspace
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mssql
+
+  admin:
+    <<: *defaults
+    build:
+      <<: *defaults
+      args:
+        SERVICE_PROJECT_PATH: src/Admin
+        SERVICE_PROJECT_FILE: Admin.csproj
+    image: localhost/bitwarden/admin:${TAG:-2026.5.0-arm64}
+    volumes:
+      - ../workspace/admin:/workspace
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mssql
+
+  identity:
+    <<: *defaults
+    build:
+      <<: *defaults
+      args:
+        SERVICE_PROJECT_PATH: src/Identity
+        SERVICE_PROJECT_FILE: Identity.csproj
+    image: localhost/bitwarden/identity:${TAG:-2026.5.0-arm64}
+    volumes:
+      - ../workspace/identity:/workspace
+    ports:
+      - "5002:5000"
+    depends_on:
+      - mssql
+
+  # Secrets Manager (commercial) — build only if you have license available
+  sm-api:
+    <<: *defaults
+    build:
+      <<: *defaults
+      args:
+        SERVICE_PROJECT_PATH: bitwarden_license/src/Commercial.Api
+        SERVICE_PROJECT_FILE: Commercial.Api.csproj
+    image: localhost/bitwarden/sm-api:${TAG:-2026.5.0-arm64}
+    volumes:
+      - ../workspace/sm-api:/workspace
+    ports:
+      - "5010:5000"
+    depends_on:
+      - mssql
+
+  nginx:
+    image: nginx:alpine
+    container_name: bwhost_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../workspace/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../workspace/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - admin
+      - identity
+      - sm-api
+    networks:
+      - bwhost_net
+
+networks:
+  bwhost_net:
+    driver: bridge

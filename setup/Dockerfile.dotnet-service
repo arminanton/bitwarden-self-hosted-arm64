@@ -1,0 +1,46 @@
+# Generic multi-stage Dockerfile for Bitwarden .NET services (arm64)
+# Build: podman build --platform linux/arm64 --build-arg BITWARDEN_REPO=... \
+#   --build-arg BITWARDEN_REF=... --build-arg SERVICE_PROJECT_PATH=src/Api \
+#   --build-arg SERVICE_PROJECT_FILE=Api.csproj --build-arg HOST_UID=1000 \
+#   --build-arg HOST_GID=1000 -f Dockerfile.dotnet-service -t localhost/bitwarden/api:tag .
+
+ARG BITWARDEN_REPO=https://github.com/bitwarden/server.git
+ARG BITWARDEN_REF=main
+ARG SERVICE_PROJECT_PATH=src/Api
+ARG SERVICE_PROJECT_FILE=Api.csproj
+ARG DOTNET_RID=linux-musl-arm64
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.23 AS build
+ARG BITWARDEN_REPO
+ARG BITWARDEN_REF
+ARG SERVICE_PROJECT_PATH
+ARG SERVICE_PROJECT_FILE
+
+RUN apk add --no-cache git ca-certificates
+RUN git clone --depth=1 --branch ${BITWARDEN_REF} ${BITWARDEN_REPO} /src
+WORKDIR /src/${SERVICE_PROJECT_PATH}
+
+RUN dotnet restore "${SERVICE_PROJECT_FILE}"
+RUN dotnet publish "${SERVICE_PROJECT_FILE}" -c Release -r ${DOTNET_RID} --no-self-contained -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.23 AS runtime
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+
+# lightweight privilege-drop helper
+RUN apk add --no-cache su-exec
+
+# create group and user with the requested host uid/gid (no-op if already present)
+RUN addgroup -g ${HOST_GID} appgroup || true \
+ && adduser -D -u ${HOST_UID} -G appgroup -s /bin/sh appuser || true
+
+WORKDIR /app
+COPY --from=build /app/publish .
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && chown -R appuser:appgroup /app
+
+ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["dotnet","Api.dll"]

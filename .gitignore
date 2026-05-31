@@ -1,0 +1,56 @@
+# Ignore sensitive and runtime data for Bitwarden self-host scaffold
+
+# License and installation keys
+workspace/license/
+workspace/license/*
+bw-lic.json
+bw-inst.md
+
+# Environment files (may contain secrets)
+.env
+.env.*
+*.env
+
+# Docker Compose overrides (often contain secrets or local creds)
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Persistent DB and app data
+workspace/mssql/
+workspace/bwdata/
+workspace/*/data/
+workspace/*/db/
+workspace/*/backups/
+workspace/logs/
+workspace/*/logs/
+*.log
+
+# Nginx certs and keys
+workspace/nginx/certs/
+*.pem
+*.key
+*.crt
+*.pfx
+
+# Build artifacts and runtimes
+**/bin/
+**/obj/
+*.dll
+*.exe
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Optional: local image archives and temporary files
+*.tar
+*.tar.gz
+
+# If you want to keep a placeholder in the repo, uncomment the following line
+# !workspace/license/README.md
