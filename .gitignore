@@ -54,3 +54,6 @@ Thumbs.db
 
 # If you want to keep a placeholder in the repo, uncomment the following line
 # !workspace/license/README.md
+
+# Keep .gitkeep files so empty directories can be tracked even if ignored
+!**/.gitkeep
