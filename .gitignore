@@ -1,7 +1,6 @@
 # Ignore sensitive and runtime data for Bitwarden self-host scaffold
 
 # License and installation keys
-workspace/license/
 workspace/license/*
 bw-lic.json
 bw-inst.md
